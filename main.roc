@@ -63,6 +63,8 @@ main =
         # Stdout.line "  Has title: \(hasTitle) \(boolToStr hasTitleSure)"
         Stdout.line "  Has title: \(boolToStr hasTitleSure)"
 
+# Helpers.
+
 boolToStr : Bool -> Str
 boolToStr = \b -> if b then "true" else "false"
 

@@ -37,12 +37,12 @@ readAndBuildSummary = \url ->
 isTitleNonEmpty : Doc -> Maybe Bool
 isTitleNonEmpty = \doc ->
     mapOkMaybe doc.head \head ->
-        mapOk head.title \title ->
+        Result.map head.title \title ->
             !(Str.isEmpty title)
 
 readWhetherTitleNonEmpty : Str -> Result (Maybe Bool) Error
 readWhetherTitleNonEmpty = \url ->
-    mapOk (readDoc url) \doc -> isTitleNonEmpty doc
+    Result.map (readDoc url) \doc -> isTitleNonEmpty doc
 
 main : Task.Task {} I32
 main =
@@ -53,13 +53,13 @@ main =
         # Summary.
         summary = readAndBuildSummary url
         # _ <- Task.await (Stdout.line "  Summary: \(summary)")
-        title = unwrapOr summary.title ""
+        title = Result.withDefault summary.title ""
         _ <- Task.await (Stdout.line "  Title: \(title)")
         # Has title.
         hasTitle = readWhetherTitleNonEmpty url
         hasTitleSure =
-            unwrapOr hasTitle (Ok Bool.false)
-            |> unwrapOr Bool.false
+            Result.withDefault hasTitle (Ok Bool.false)
+            |> Result.withDefault Bool.false
         # Stdout.line "  Has title: \(hasTitle) \(boolToStr hasTitleSure)"
         Stdout.line "  Has title: \(boolToStr hasTitleSure)"
 
@@ -68,19 +68,7 @@ main =
 boolToStr : Bool -> Str
 boolToStr = \b -> if b then "true" else "false"
 
-mapOk : Result ok err, (ok -> ok2) -> Result ok2 err
-mapOk = \result, transformOk ->
-    when result is
-        Ok ok -> Ok (transformOk ok)
-        Err err -> Err err
-
 mapOkMaybe : Result ok err, (ok -> Maybe ok2) -> Maybe ok2
 mapOkMaybe = \result, transformOk ->
-    mapOk result transformOk
-    |> unwrapOr (Err {})
-
-unwrapOr : Result ok err, ok -> ok
-unwrapOr = \result, orValue ->
-    when result is
-        Ok ok -> ok
-        Err _ -> orValue
+    Result.map result transformOk
+    |> Result.withDefault (Err {})

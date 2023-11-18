@@ -52,7 +52,7 @@ main =
         _ <- Task.await (Stdout.line "Checking \"https://\(url)/\":")
         # Summary.
         summary = readAndBuildSummary url
-        # _ <- Task.await (Stdout.line "  Summary: \(summary)")
+        _ <- Task.await (Stdout.line "  Summary: \(summaryToStr summary)")
         title = Result.withDefault summary.title ""
         _ <- Task.await (Stdout.line "  Title: \(title)")
         # Has title.
@@ -60,15 +60,39 @@ main =
         hasTitleSure =
             Result.withDefault hasTitle (Ok Bool.false)
             |> Result.withDefault Bool.false
-        # Stdout.line "  Has title: \(hasTitle) \(boolToStr hasTitleSure)"
-        Stdout.line "  Has title: \(boolToStr hasTitleSure)"
+        hasTitleText = resultMaybeBoolToStr hasTitle
+        Stdout.line "  Has title: \(hasTitleText) vs \(boolToStr hasTitleSure)"
 
 # Helpers.
 
 boolToStr : Bool -> Str
-boolToStr = \b -> if b then "true" else "false"
+boolToStr = \bool -> if bool then "true" else "false"
 
 mapOkMaybe : Result ok err, (ok -> Maybe ok2) -> Maybe ok2
 mapOkMaybe = \result, transformOk ->
     Result.map result transformOk
     |> Result.withDefault (Err {})
+
+maybeStrToStr : Maybe Str -> Str
+maybeStrToStr = \maybe -> Result.withDefault maybe "null"
+
+resultMaybeBoolToStr : Result (Maybe Bool) Error -> Str
+resultMaybeBoolToStr = \result ->
+    when result is
+        Ok maybe ->
+            content =
+                Result.map maybe \bool -> boolToStr bool
+                |> maybeStrToStr
+            "(Ok \(content))"
+
+        Err err -> "(Err \(err))"
+
+summaryToStr : Summary -> Str
+summaryToStr = \summary ->
+    title = maybeStrToStr summary.title
+    "{ title: \(title), ok: \(boolToStr summary.ok) }"
+
+# On formatting, see also:
+# https://github.com/roc-lang/roc/blob/6ccee5360a8d61a3f60b031d113502e08a894b1e/crates/compiler/builtins/roc/Inspect.roc
+# https://github.com/roc-lang/roc/blob/6ccee5360a8d61a3f60b031d113502e08a894b1e/examples/inspect-logging.roc
+# https://github.com/roc-lang/roc/blob/6ccee5360a8d61a3f60b031d113502e08a894b1e/examples/Community.roc#L94

@@ -25,10 +25,7 @@ readDoc = \url ->
 
 buildSummary : Doc -> Summary
 buildSummary = \doc ->
-    title =
-        when doc.head is
-            Ok head -> head.title
-            Err _ -> Err {}
+    title = mapOkMaybe doc.head \head -> head.title
     { title, ok: Bool.true }
 
 readAndBuildSummary : Str -> Summary
@@ -39,19 +36,13 @@ readAndBuildSummary = \url ->
 
 isTitleNonEmpty : Doc -> Maybe Bool
 isTitleNonEmpty = \doc ->
-    when doc.head is
-        Ok head ->
-            when head.title is
-                Ok title -> Ok (!(Str.isEmpty title))
-                Err _ -> Err {}
-
-        Err _ -> Err {}
+    mapOkMaybe doc.head \head ->
+        mapOk head.title \title ->
+            !(Str.isEmpty title)
 
 readWhetherTitleNonEmpty : Str -> Result (Maybe Bool) Error
 readWhetherTitleNonEmpty = \url ->
-    when readDoc url is
-        Ok doc -> Ok (isTitleNonEmpty doc)
-        Err err -> Err err
+    mapOk (readDoc url) \doc -> isTitleNonEmpty doc
 
 main : Task.Task {} I32
 main =
@@ -62,22 +53,32 @@ main =
         # Summary.
         summary = readAndBuildSummary url
         # _ <- Task.await (Stdout.line "  Summary: \(summary)")
-        title =
-            when summary.title is
-                Ok actualTitle -> actualTitle
-                Err _ -> ""
+        title = unwrapOr summary.title ""
         _ <- Task.await (Stdout.line "  Title: \(title)")
         # Has title.
         hasTitle = readWhetherTitleNonEmpty url
         hasTitleSure =
-            when hasTitle is
-                Ok hasTitleMaybe ->
-                    when hasTitleMaybe is
-                        Ok reallyHas -> reallyHas
-                        Err _ -> Bool.false
-
-                Err _ -> Bool.false
+            unwrapOr hasTitle (Ok Bool.false)
+            |> unwrapOr Bool.false
         # Stdout.line "  Has title: \(hasTitle) \(boolToStr hasTitleSure)"
         Stdout.line "  Has title: \(boolToStr hasTitleSure)"
 
+boolToStr : Bool -> Str
 boolToStr = \b -> if b then "true" else "false"
+
+mapOk : Result ok err, (ok -> ok2) -> Result ok2 err
+mapOk = \result, transformOk ->
+    when result is
+        Ok ok -> Ok (transformOk ok)
+        Err err -> Err err
+
+mapOkMaybe : Result ok err, (ok -> Maybe ok2) -> Maybe ok2
+mapOkMaybe = \result, transformOk ->
+    mapOk result transformOk
+    |> unwrapOr (Err {})
+
+unwrapOr : Result ok err, ok -> ok
+unwrapOr = \result, orValue ->
+    when result is
+        Ok ok -> ok
+        Err _ -> orValue

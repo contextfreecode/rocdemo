@@ -3,26 +3,27 @@ app "hello"
     imports [pf.Stdout, pf.Task.{ await }]
     provides [main] to pf
 
+Maybe elem : Result elem {}
+Doc : { head : Maybe Head }
+Head : { title : Maybe Str }
+Summary : { title : Maybe Str, ok : Bool }
+Error : Str
+
+readDoc : Str -> Result Doc Error
+readDoc = \url ->
+    has = \text -> Str.contains url text
+    if has "fail" then Err "Bad read of \(url)"
+    else Ok (
+        when url is
+            _ if has "head-missing" -> { head: Err {} }
+            _ if has "title-missing" -> { head: Ok { title: Err {} } }
+            _ if has "title-empty" -> { head: Ok { title: Ok "" } }
+            _ -> { head: Ok { title: Ok "Title of \(url)" } }
+    )
+
 main =
-    _ <- await (Stdout.line "There are \(total) animals.")
-    Stdout.line "Also \(stoplightStr) is a color."
-
-# The `note` field is unused by addAndStringify
-total = addAndStringify { birds: 4, iguanas: 3, note: "Whee!" }
-
-addAndStringify = \{ birds, iguanas } ->
-    Num.toStr (birds + iguanas)
-
-stoplightColor = Red
-
-stoplightStr =
-    when stoplightColor is
-        Red -> "red"
-        Green -> "green"
-        Yellow -> "yellow"
-
-# something =
-#     List.map [StrElem "A", StrElem "b", NumElem 1, StrElem "c", NumElem -3] \elem ->
-#         when elem is
-#             NumElem num -> Num.isNegative num
-#             StrElem str -> Str.isCapitalized str
+    urls = ["good", "title-empty", "title-missing", "head-missing", "fail"]
+    List.walk urls (Task.ok {}) \task, url ->
+        _ <- await task
+        doc = readDoc url
+        Stdout.line "Also \(url)"

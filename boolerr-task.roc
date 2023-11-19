@@ -7,13 +7,13 @@ Maybe elem : Result elem {}
 Doc : { head : Maybe Head }
 Head : { title : Maybe Str }
 Summary : { title : Maybe Str, ok : Bool }
-Error : Str
+Error : [BadRead Str]
 
-readDoc : Str -> Task.Task Doc Error
+readDoc : Str -> Task.Task Doc _
 readDoc = \url ->
     has = \text -> Str.contains url text
     if has "fail" then
-        Task.err "Bad read of \(url)"
+        Task.err (BadRead url)
     else
         doc =
             when url is
@@ -30,7 +30,7 @@ buildSummary = \doc ->
 
 HandlingTask a b ok err : a, (b -> Task.Task ok err) -> Task.Task ok err
 
-readAndBuildSummary : HandlingTask Str Summary ok err
+readAndBuildSummary : HandlingTask Str Summary _ _
 readAndBuildSummary = \url, handle ->
     docResult <- Task.attempt (readDoc url)
     summary =
@@ -45,7 +45,7 @@ isTitleNonEmpty = \doc ->
         Result.map head.title \title ->
             !(Str.isEmpty title)
 
-readWhetherTitleNonEmpty : Str -> Task.Task (Maybe Bool) Error
+readWhetherTitleNonEmpty : Str -> Task.Task (Maybe Bool) _
 readWhetherTitleNonEmpty = \url ->
     Task.map (readDoc url) \doc -> isTitleNonEmpty doc
 
@@ -90,7 +90,7 @@ resultMaybeBoolToStr = \result ->
                 |> maybeStrToStr
             "(Ok \(content))"
 
-        Err err -> "(Err \(err))"
+        Err (BadRead url) -> "(BadRead \(url))"
 
 summaryToStr : Summary -> Str
 summaryToStr = \summary ->

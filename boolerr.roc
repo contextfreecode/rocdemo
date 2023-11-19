@@ -7,13 +7,13 @@ Maybe elem : Result elem {}
 Doc : { head : Maybe Head }
 Head : { title : Maybe Str }
 Summary : { title : Maybe Str, ok : Bool }
-Error : Str
+Error : [BadRead Str]
 
-readDoc : Str -> Result Doc Error
+readDoc : Str -> Result Doc _
 readDoc = \url ->
     has = \text -> Str.contains url text
     if has "fail" then
-        Err "Bad read of \(url)"
+        Err (BadRead url)
     else
         doc =
             when url is
@@ -40,7 +40,7 @@ isTitleNonEmpty = \doc ->
         Result.map head.title \title ->
             !(Str.isEmpty title)
 
-readWhetherTitleNonEmpty : Str -> Result (Maybe Bool) Error
+readWhetherTitleNonEmpty : Str -> Result (Maybe Bool) _
 readWhetherTitleNonEmpty = \url ->
     Result.map (readDoc url) \doc -> isTitleNonEmpty doc
 
@@ -85,7 +85,7 @@ resultMaybeBoolToStr = \result ->
                 |> maybeStrToStr
             "(Ok \(content))"
 
-        Err err -> "(Err \(err))"
+        Err (BadRead url) -> "(BadRead \(url))"
 
 summaryToStr : Summary -> Str
 summaryToStr = \summary ->

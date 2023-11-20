@@ -16,7 +16,7 @@ readDoc = \url ->
         Err (BadRead url)
     else
         doc =
-            when url is
+            when {} is
                 _ if has "head-missing" -> { head: Err {} }
                 _ if has "title-missing" -> { head: Ok { title: Err {} } }
                 _ if has "title-empty" -> { head: Ok { title: Ok "" } }

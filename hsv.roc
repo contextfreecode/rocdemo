@@ -5,13 +5,14 @@ app "hello"
 
 Point3 a : (Frac a, Frac a, Frac a)
 
-Color scalar : [
-    Hsv (Point3 scalar),
-    Rgb (Point3 scalar),
+Color a : [
+    Hsv (Point3 a),
+    Rgb (Point3 a),
     NamedColor Str,
 ]
 
-namedColors =
+namedColors : {} -> Dict Str [Rgb (Point3 a)]
+namedColors = \{} ->
     Dict.empty {}
     |> Dict.insert "red" (Rgb (1, 0, 0))
     |> Dict.insert "yellow" (Rgb (1, 1, 0))
@@ -22,22 +23,23 @@ hsvToRgb = \(h, s, v) ->
     c = s * v
     h1 = h * 6.0
     x = c * (1 - (Num.abs ((fracRem h1 2) - 1)))
-    (r, g, b) = when {} is
-        _ if h1 < 1 -> (c, x, 0)
-        _ if h1 < 2 -> (x, c, 0)
-        _ if h1 < 3 -> (0, c, x)
-        _ if h1 < 4 -> (0, x, c)
-        _ if h1 < 5 -> (x, 0, c)
-        _ -> (c, 0, x)
+    (r, g, b) =
+        when {} is
+            _ if h1 < 1 -> (c, x, 0)
+            _ if h1 < 2 -> (x, c, 0)
+            _ if h1 < 3 -> (0, c, x)
+            _ if h1 < 4 -> (0, x, c)
+            _ if h1 < 5 -> (x, 0, c)
+            _ -> (c, 0, x)
     m = v - c
     (r + m, g + m, b + m)
 
-# colorToRgb : Color scalar -> [Rgb (Point3 scalar)]
+colorToRgb : Color a -> Result [Rgb (Point3 a)] [KeyNotFound]
 colorToRgb = \color ->
     when color is
-        Rgb _ -> Ok color
+        Rgb rgb -> Ok (Rgb rgb)
         Hsv hsv -> Ok (Rgb (hsvToRgb hsv))
-        NamedColor name -> Dict.get namedColors name
+        NamedColor name -> Dict.get (namedColors {}) name
 
 main : Task.Task {} I32
 main =
@@ -52,6 +54,7 @@ main =
         # rgb = colorToRgb color
         Stdout.line "Hi!"
 
+fracRem : Frac a, Frac a -> Frac a
 fracRem = \x, y ->
     quotient = x / y
     quotient - Num.toFrac (Num.floor quotient)

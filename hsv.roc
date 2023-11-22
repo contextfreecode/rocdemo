@@ -3,22 +3,22 @@ app "hello"
     imports [pf.Stdout, pf.Task] # pf.Task.{ await }
     provides [main] to pf
 
-Point3 a : (Frac a, Frac a, Frac a)
+Point3 : (Frac F32, Frac F32, Frac F32)
 
-Color a : [
-    Hsv (Point3 a),
-    Rgb (Point3 a),
+Color : [
+    Hsv Point3,
+    Rgb Point3,
     NamedColor Str,
 ]
 
-namedColors : {} -> Dict Str [Rgb (Point3 a)]
-namedColors = \{} ->
+namedColors : Dict Str [Rgb Point3]
+namedColors =
     Dict.empty {}
     |> Dict.insert "red" (Rgb (1, 0, 0))
     |> Dict.insert "yellow" (Rgb (1, 1, 0))
     |> Dict.insert "blue" (Rgb (0, 0, 1))
 
-hsvToRgb : Point3 a -> Point3 a
+hsvToRgb : Point3 -> Point3
 hsvToRgb = \(h, s, v) ->
     c = s * v
     h1 = h * 6.0
@@ -34,12 +34,12 @@ hsvToRgb = \(h, s, v) ->
     m = v - c
     (r + m, g + m, b + m)
 
-colorToRgb : Color a -> Result [Rgb (Point3 a)] [KeyNotFound]
+colorToRgb : Color -> Result [Rgb Point3] [KeyNotFound]
 colorToRgb = \color ->
     when color is
         Rgb rgb -> Ok (Rgb rgb)
         Hsv hsv -> Ok (Rgb (hsvToRgb hsv))
-        NamedColor name -> Dict.get (namedColors {}) name
+        NamedColor name -> Dict.get namedColors name
 
 main : Task.Task {} I32
 main =
@@ -51,10 +51,31 @@ main =
     ]
     List.walkWithIndex colors (Task.ok {}) \task, color, index ->
         _ <- Task.await task
-        # rgb = colorToRgb color
-        Stdout.line "Hi!"
+        rgb = colorToRgb color
+        Stdout.line "Color: \(Num.toStr index): \(maybeColorToStr rgb)"
+
+# Helpers.
+
+colorToStr : [Rgb Point3] -> Str
+colorToStr = \color ->
+    when color is
+        Rgb rgb -> "Rgb \(point3ToStr rgb)"
+        # Hsv hsv -> "Hsv \(point3ToStr hsv)"
+        # NamedColor name -> "NamedColor \(name)"
 
 fracRem : Frac a, Frac a -> Frac a
 fracRem = \x, y ->
     quotient = x / y
     quotient - Num.toFrac (Num.floor quotient)
+
+maybeColorToStr : Result [Rgb Point3] [KeyNotFound] -> Str
+maybeColorToStr = \maybeColor ->
+    when maybeColor is
+        Ok color -> colorToStr color
+        Err KeyNotFound -> "KeyNotFound"
+
+point3ToStr = \(x, y, z) ->
+    joined =
+        List.map [x, y, z] \n -> Num.toStr n
+        |> Str.joinWith ", "
+    "(\(joined))"

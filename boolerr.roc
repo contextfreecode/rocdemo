@@ -3,7 +3,7 @@ app "hello"
     imports [pf.Stdout, pf.Task] # pf.Task.{ await }
     provides [main] to pf
 
-Maybe elem : Result elem {}
+Maybe elem : Result elem [Missing]
 Doc : { head : Maybe Head }
 Head : { title : Maybe Str }
 Summary : { title : Maybe Str, ok : Bool }
@@ -17,8 +17,8 @@ readDoc = \url ->
     else
         doc =
             when {} is
-                _ if has "head-missing" -> { head: Err {} }
-                _ if has "title-missing" -> { head: Ok { title: Err {} } }
+                _ if has "head-missing" -> { head: Err Missing }
+                _ if has "title-missing" -> { head: Ok { title: Err Missing } }
                 _ if has "title-empty" -> { head: Ok { title: Ok "" } }
                 _ -> { head: Ok { title: Ok "Title of \(url)" } }
         Ok doc
@@ -32,7 +32,7 @@ readAndBuildSummary : Str -> Summary
 readAndBuildSummary = \url ->
     when readDoc url is
         Ok doc -> buildSummary doc
-        Err _ -> { title: Err {}, ok: Bool.false }
+        Err _ -> { title: Err Missing, ok: Bool.false }
 
 isTitleNonEmpty : Doc -> Maybe Bool
 isTitleNonEmpty = \doc ->
@@ -71,7 +71,7 @@ boolToStr = \bool -> if bool then "true" else "false"
 mapOkMaybe : Result ok err, (ok -> Maybe ok2) -> Maybe ok2
 mapOkMaybe = \result, transformOk ->
     Result.map result transformOk
-    |> Result.withDefault (Err {})
+    |> Result.withDefault (Err Missing)
 
 maybeStrToStr : Maybe Str -> Str
 maybeStrToStr = \maybe -> Result.withDefault maybe "null"
